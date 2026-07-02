@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>راه ارتباطی پشتیبان</title>
+    
+    <!-- بارگذاری فونت نستعلیق ایران‌نستعلیق از طریق CDN -->
+    <link href="https://cdn.jsdelivr.net/gh/fontiran/fonts@latest/IranNastaliq/IranNastaliq.css" rel="stylesheet" type="text/css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IranNastaliq', 'Tahoma', sans-serif;
+            background: #fef9f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .backup-container {
+            max-width: 600px;
+            background: white;
+            border-radius: 20px;
+            padding: 60px 40px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            border-top: 5px solid #e55a2b;
+        }
+
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #e55a2b;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            font-weight: normal; /* برای فونت نستعلیق معمولاً bold تعریف نشده */
+        }
+
+        .message {
+            font-size: 1.5rem;
+            color: #555;
+            margin-bottom: 30px;
+        }
+
+        .contact-number {
+            display: inline-block;
+            background: #fff5f0;
+            padding: 15px 35px;
+            border-radius: 50px;
+            font-size: 2rem;
+            color: #e55a2b;
+            text-decoration: none;
+            direction: ltr; /* عدد انگلیسی را ltr نشان می‌دهد */
+            unicode-bidi: embed;
+            font-family: 'IranNastaliq', 'Tahoma', sans-serif;
+            box-shadow: 0 5px 15px rgba(229, 90, 43, 0.15);
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+
+        .contact-number:hover {
+            background: #e55a2b;
+            color: white;
+        }
+
+        .note {
+            margin-top: 30px;
+            font-family: 'Vazirmatn', 'Tahoma', sans-serif; /* برای متن کمکی از فونت خوانا استفاده می‌کنیم */
+            font-size: 0.95rem;
+            color: #888;
+        }
+
+        .note a {
+            color: #e55a2b;
+            text-decoration: none;
+        }
+
+        @media (max-width: 500px) {
+            .backup-container {
+                padding: 40px 25px;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+            .contact-number {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="backup-container">
+        <div class="icon">🪴</div>
+        <h1>اگر دسترسی به سایت اصلی با مشکل مواجه شد، نگران نباشید.</h1>
+        <p class="message">لطفاً در روبیکا به شماره زیر پیام دهید:</p>
+        <a href="rubika://open.chat?number=989389602290" class="contact-number">۰۹۳۸۹۶۰۲۲۹۰</a>
+        <p class="note">
+            <small>یا می‌توانید شماره را ذخیره کرده و در روبیکا جستجو کنید.</small><br>
+            <small>همچنین ایمیل: <a href="mailto:info@example.com">info@example.com</a> (ایمیل خود را جایگزین کنید)</small>
+        </p>
+    </div>
+</body>
+</html>
