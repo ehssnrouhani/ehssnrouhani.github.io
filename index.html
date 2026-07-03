@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>راهبردساز مطالعه کنکور - مدل ریاضی</title>
+    <!-- Tailwind CSS for quick styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for premium charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body { font-family: 'Vazirmatn', Tahoma, sans-serif; }
+        .premium-locked { filter: blur(8px); pointer-events: none; user-select: none; }
+        .premium-badge { background: gold; color: black; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+<div class="container mx-auto p-4 max-w-6xl">
+    <h1 class="text-3xl font-bold text-center mb-6 text-indigo-700">
+        📚 راهبردساز مطالعه کنکور
+        <span class="text-base font-normal text-gray-500 block">مبتنی بر مدل ریاضی ACT‑R و یادگیری تقویتی</span>
+    </h1>
+
+    <!-- مدیریت مباحث -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white p-4 rounded-xl shadow">
+            <h2 class="text-xl font-semibold mb-3">➕ افزودن مبحث جدید</h2>
+            <div class="flex gap-2 flex-wrap">
+                <input type="text" id="newTopicName" placeholder="نام مبحث" class="border rounded px-3 py-2 flex-1">
+                <select id="newTopicCategory" class="border rounded px-3 py-2">
+                    <option value="ریاضی">ریاضی</option>
+                    <option value="فیزیک">فیزیک</option>
+                    <option value="شیمی">شیمی</option>
+                    <option value="زیست">زیست</option>
+                    <option value="عمومی">عمومی</option>
+                </select>
+                <input type="number" id="newTopicMastery" placeholder="تسلط اولیه %" min="0" max="100" value="50" class="border rounded px-3 py-2 w-24">
+                <button onclick="addTopic()" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">افزودن</button>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow">
+            <h2 class="text-xl font-semibold mb-3">📅 تاریخ کنکور</h2>
+            <input type="date" id="examDate" class="border rounded px-3 py-2">
+            <button onclick="setExamDate()" class="bg-green-600 text-white px-4 py-2 rounded mr-2 hover:bg-green-700">ذخیره</button>
+            <span id="daysLeft" class="text-sm text-gray-500 mr-2"></span>
+        </div>
+    </div>
+
+    <!-- جدول مباحث و ثبت تمرین -->
+    <div class="bg-white p-4 rounded-xl shadow mb-6 overflow-x-auto">
+        <h2 class="text-xl font-semibold mb-3">📋 مباحث درسی من</h2>
+        <div id="topicsContainer" class="text-sm">
+            <!-- لیست مباحث اینجا رندر می‌شود -->
+        </div>
+    </div>
+
+    <!-- خروجی رایگان: برنامه امروز -->
+    <div class="bg-white p-4 rounded-xl shadow mb-6" id="freePlanSection">
+        <h2 class="text-2xl font-bold text-green-700 mb-4">✅ برنامهٔ امروز (رایگان)</h2>
+        <div id="freePlanContent">
+            <p class="text-gray-500">برای دریافت برنامه، لطفاً مباحث را اضافه کنید و تاریخ کنکور را تنظیم نمایید.</p>
+        </div>
+    </div>
+
+    <!-- بخش پریمیوم -->
+    <div class="bg-white p-4 rounded-xl shadow mb-6 relative" id="premiumSection">
+        <div class="flex justify-between items-center mb-3">
+            <h2 class="text-2xl font-bold text-yellow-600">⭐ تحلیل پیشرفته (پریمیوم)</h2>
+            <span class="premium-badge">پریمیوم</span>
+        </div>
+        <div id="premiumContent" class="premium-locked">
+            <!-- نمودار و تحلیل اینجا -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <h3 class="font-semibold mb-2">📈 پیش‌بینی احتمال تسلط</h3>
+                    <canvas id="masteryChart" width="400" height="200"></canvas>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-2">📊 برآورد نمرهٔ نهایی</h3>
+                    <div id="scoreEstimate" class="text-4xl font-bold text-indigo-600"></div>
+                    <p class="text-sm text-gray-500">(با فرض پوشش کامل مباحث برنامه‌ریزی شده)</p>
+                </div>
+            </div>
+            <div class="mt-4 text-sm text-gray-600">
+                <h4 class="font-semibold">پارامترهای فراموشی شما (میانگین)</h4>
+                <p>شیب فراموشی (α): <span id="avgAlpha"></span></p>
+                <p>مقیاس فراموشی (γ): <span id="avgGamma"></span></p>
+            </div>
+        </div>
+        <!-- قفل پریمیوم -->
+        <div id="premiumLock" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 rounded-xl">
+            <div class="text-center">
+                <p class="mb-3">برای مشاهده تحلیل کامل، کد پریمیوم را وارد کنید</p>
+                <input type="text" id="premiumCode" placeholder="کد ۱۰ رقمی" class="border rounded px-3 py-2 mb-2 text-center">
+                <button onclick="unlockPremium()" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 block w-full">فعال‌سازی</button>
+                <p class="text-xs text-gray-400 mt-2">کد آزمایشی: KONKOOR1404</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// --------------------- پایگاه داده محلی ---------------------
+let topics = JSON.parse(localStorage.getItem('topics') || '[]');
+let examDate = localStorage.getItem('examDate') || '';
+let premiumUnlocked = localStorage.getItem('premiumUnlocked') === 'true';
+
+// پارامترهای ثابت مدل
+const BASE_ALPHA = 0.2;      // شیب فراموشی پیش‌فرض
+const BASE_GAMMA = 0.5;      // مقیاس فراموشی
+const LEARNING_RATE = 0.3;   // نرخ یادگیری پس از مرور موفق
+const SLIP_PROB = 0.1;       // احتمال لغزش (جواب اشتباه با وجود تسلط)
+const GUESS_PROB = 0.25;     // احتمال حدس درست (چهارگزینه‌ای)
+const OPTIMAL_DIFFICULTY_MIN = 0.6;
+const OPTIMAL_DIFFICULTY_MAX = 0.85;
+
+// --------------------- توابع کمکی مدل ---------------------
+function decayMastery(topic, now = Date.now()) {
+    if (!topic.lastStudy) return topic.mastery;
+    const dt = (now - topic.lastStudy) / (1000 * 60 * 60 * 24); // روز
+    if (dt <= 0) return topic.mastery;
+    // قانون توانی فراموشی: p' = p0 / (1 + gamma * dt)^alpha
+    const alpha = topic.alpha || BASE_ALPHA;
+    const gamma = topic.gamma || BASE_GAMMA;
+    return topic.mastery / Math.pow(1 + gamma * dt, alpha);
+}
+
+function bayesianUpdate(prior, isCorrect, reactionTimeSec = 3) {
+    // likelihoods
+    const p_correct_given_mastered = 1 - SLIP_PROB;
+    const p_correct_given_notMastered = GUESS_PROB;
+    let likelihood;
+    if (isCorrect) {
+        likelihood = p_correct_given_mastered / p_correct_given_notMastered;
+    } else {
+        likelihood = (1 - p_correct_given_mastered) / (1 - p_correct_given_notMastered);
+    }
+    // وزن‌دهی بر اساس سرعت پاسخ (زیر ۲ ثانیه نشانه تسلط بالاست)
+    const speedFactor = Math.min(1.5, Math.max(0.5, 2 / reactionTimeSec));
+    const adjustedLikelihood = Math.pow(likelihood, speedFactor);
+    const odds = prior / (1 - prior) * adjustedLikelihood;
+    return odds / (1 + odds);
+}
+
+function studyTopic(topic, isCorrect, reactionTimeSec) {
+    // اول فراموشی را اعمال می‌کنیم
+    const currentMastery = decayMastery(topic);
+    // به‌روزرسانی بیزی
+    const newMastery = bayesianUpdate(currentMastery, isCorrect, reactionTimeSec);
+    topic.mastery = Math.min(0.99, Math.max(0.01, newMastery));
+    topic.lastStudy = Date.now();
+    // ثبت در تاریخچه
+    if (!topic.history) topic.history = [];
+    topic.history.push({ date: Date.now(), correct: isCorrect, rt: reactionTimeSec });
+    // اگر تعداد تاریخچه کافی بود، پارامترهای فراموشی را تنظیم کنیم (ساده شده)
+    if (topic.history.length > 5) {
+        // برآورد ساده آلفا از روی افت تسلط بین دو مطالعه
+        const lastTwo = topic.history.slice(-2);
+        if (lastTwo.length === 2) {
+            const dt = (lastTwo[1].date - lastTwo[0].date) / (1000*60*60*24);
+            if (dt > 0.1) {
+                // فرض می‌کنیم تسلط قبل از مرور دوم = mastery_after_first * decay
+                // اینجا فقط یک تنظیم خام است
+                const observedRetention = topic.mastery; // بعد از آپدیت
+                // alpha = -log(retention)/log(1+gamma*dt)  ولی ساده‌سازی می‌کنیم
+                topic.alpha = Math.max(0.1, Math.min(0.8, -Math.log(observedRetention)/Math.log(1+BASE_GAMMA*dt)));
+            }
+        }
+    }
+    saveData();
+}
+
+// --------------------- اولویت‌بندی برای برنامه امروز ---------------------
+function computePriority(topic, now = Date.now()) {
+    const p = decayMastery(topic, now);
+    const daysSinceReview = topic.lastStudy ? (now - topic.lastStudy)/(1000*60*60*24) : 999;
+    const daysToExam = examDate ? (new Date(examDate) - now)/(1000*60*60*24) : 100;
+    
+    // 1. فوریت بر اساس احتمال تسلط پایین و نزدیکی به کنکور
+    const urgency = Math.max(0, (1 - p) * (1 / Math.max(1, daysToExam)));
+    
+    // 2. پاداش RL (منطقه طلایی دشواری)
+    let rlBonus = 0;
+    if (p >= OPTIMAL_DIFFICULTY_MIN && p <= OPTIMAL_DIFFICULTY_MAX) {
+        // حداکثر در 0.75
+        rlBonus = 1 - 4 * Math.pow(p - 0.75, 2);
+    }
+    
+    // 3. فاصله از آخرین مرور (فراموشی بحرانی)
+    const reviewUrgency = Math.min(1, daysSinceReview / (1 + topic.alpha * 5));
+    
+    // وزن‌ها: urgency 0.5, rlBonus 0.3, review 0.2
+    return 0.5 * urgency + 0.3 * rlBonus + 0.2 * reviewUrgency;
+}
+
+// --------------------- پیشنهاد مطالعه ترکیبی (MDL) ---------------------
+function getInterleavingSuggestion(selectedTopics, allTopics) {
+    const categories = {};
+    for (let t of selectedTopics) {
+        if (!categories[t.category]) categories[t.category] = [];
+        categories[t.category].push(t);
+    }
+    let suggestion = '';
+    for (let cat in categories) {
+        if (categories[cat].length >= 2) {
+            const t1 = categories[cat][0];
+            const t2 = categories[cat][1];
+            // بررسی اینکه اخیراً با هم مطالعه نشده باشند
+            const bothStudiedToday = t1.lastStudy && t2.lastStudy &&
+                Math.abs(t1.lastStudy - t2.lastStudy) < 3600000; // کمتر از ۱ ساعت
+            if (!bothStudiedToday) {
+                suggestion += `📌 پیشنهاد MDL: امروز ${t1.name} و ${t2.name} را پشت سر هم مطالعه کن (دسته ${cat}). `;
+            }
+        }
+    }
+    return suggestion;
+}
+
+// --------------------- تولید برنامه روزانه ---------------------
+function generatePlan(totalMinutes = 180) {
+    if (topics.length === 0 || !examDate) return null;
+    const now = Date.now();
+    // محاسبه اولویت‌ها
+    const priorities = topics.map(t => ({ topic: t, priority: computePriority(t, now) }));
+    priorities.sort((a,b) => b.priority - a.priority);
+    
+    // حذف مباحثی که تسلط بسیار بالا دارند (>0.95) مگر اینکه مدت طولانی مرور نشده باشند
+    const filtered = priorities.filter(p => {
+        const mastery = decayMastery(p.topic, now);
+        return mastery < 0.95 || (p.topic.lastStudy && (now - p.topic.lastStudy)/(86400000) > 30);
+    });
+    
+    if (filtered.length === 0) return { plan: [], suggestion: 'همه مباحث در سطح عالی هستند. مرور سریع کافی است.' };
+    
+    // توزیع زمان بر اساس اولویت
+    const totalPriority = filtered.reduce((sum, p) => sum + p.priority, 0);
+    const plan = filtered.slice(0, 8).map(p => {
+        const time = Math.round((p.priority / totalPriority) * totalMinutes);
+        return { topic: p.topic, minutes: Math.max(10, time) };
+    });
+    
+    // اضافه کردن پیشنهاد ترکیبی
+    const selectedTopics = plan.map(p => p.topic);
+    const interleave = getInterleavingSuggestion(selectedTopics, topics);
+    
+    return { plan, suggestion: interleave };
+}
+
+// --------------------- رندر رابط کاربری ---------------------
+function renderTopics() {
+    const container = document.getElementById('topicsContainer');
+    if (topics.length === 0) {
+        container.innerHTML = '<p class="text-gray-400">هنوز هیچ مبحثی اضافه نشده است.</p>';
+        return;
+    }
+    const now = Date.now();
+    let html = `<table class="w-full border-collapse"><thead><tr class="bg-gray-50">
+        <th class="p-2 border">مبحث</th><th class="p-2 border">دسته</th><th class="p-2 border">تسلط فعلی</th>
+        <th class="p-2 border">آخرین مرور</th><th class="p-2 border">ثبت تمرین</th><th class="p-2 border"></th>
+    </tr></thead><tbody>`;
+    
+    for (let t of topics) {
+        const p = decayMastery(t, now);
+        const lastReview = t.lastStudy ? new Date(t.lastStudy).toLocaleDateString('fa-IR') : 'هرگز';
+        html += `<tr>
+            <td class="p-2 border">${t.name}</td>
+            <td class="p-2 border">${t.category}</td>
+            <td class="p-2 border font-mono">${(p*100).toFixed(1)}%</td>
+            <td class="p-2 border">${lastReview}</td>
+            <td class="p-2 border">
+                <button onclick="logPractice('${t.name}', true)" class="bg-green-100 text-green-800 px-2 py-1 rounded mr-1">✓ درست</button>
+                <button onclick="logPractice('${t.name}', false)" class="bg-red-100 text-red-800 px-2 py-1 rounded">✗ نادرست</button>
+            </td>
+            <td class="p-2 border"><button onclick="deleteTopic('${t.name}')" class="text-red-500">🗑️</button></td>
+        </tr>`;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function renderFreePlan() {
+    const planDiv = document.getElementById('freePlanContent');
+    if (!examDate) {
+        planDiv.innerHTML = '<p class="text-gray-500">لطفاً تاریخ کنکور را تنظیم کنید.</p>';
+        return;
+    }
+    const result = generatePlan();
+    if (!result) {
+        planDiv.innerHTML = '<p class="text-gray-500">مبحثی برای برنامه‌ریزی وجود ندارد.</p>';
+        return;
+    }
+    let html = '<ul class="list-disc list-inside space-y-2">';
+    result.plan.forEach(item => {
+        html += `<li><span class="font-semibold">${item.topic.name}</span> (${item.topic.category}) – ${item.minutes} دقیقه</li>`;
+    });
+    html += '</ul>';
+    if (result.suggestion) {
+        html += `<div class="mt-3 p-2 bg-blue-50 rounded text-blue-800">${result.suggestion}</div>`;
+    }
+    planDiv.innerHTML = html;
+}
+
+// --------------------- عملیات اصلی ---------------------
+function addTopic() {
+    const name = document.getElementById('newTopicName').value.trim();
+    const category = document.getElementById('newTopicCategory').value;
+    const masteryPercent = parseInt(document.getElementById('newTopicMastery').value) || 50;
+    if (!name) return alert('نام مبحث را وارد کنید.');
+    if (topics.find(t => t.name === name)) return alert('این مبحث قبلاً اضافه شده است.');
+    topics.push({
+        name,
+        category,
+        mastery: masteryPercent / 100,
+        lastStudy: null,
+        alpha: BASE_ALPHA,
+        gamma: BASE_GAMMA,
+        history: []
+    });
+    saveData();
+    document.getElementById('newTopicName').value = '';
+    renderTopics();
+    renderFreePlan();
+    renderPremiumIfUnlocked();
+}
+
+function deleteTopic(name) {
+    topics = topics.filter(t => t.name !== name);
+    saveData();
+    renderTopics();
+    renderFreePlan();
+    renderPremiumIfUnlocked();
+}
+
+function logPractice(topicName, isCorrect, reactionTimeSec = null) {
+    const topic = topics.find(t => t.name === topicName);
+    if (!topic) return;
+    // شبیه‌سازی زمان واکنش (اگر نباشد)
+    if (!reactionTimeSec) {
+        reactionTimeSec = isCorrect ? (Math.random() * 3 + 1) : (Math.random() * 5 + 3);
+    }
+    studyTopic(topic, isCorrect, reactionTimeSec);
+    renderTopics();
+    renderFreePlan();
+    renderPremiumIfUnlocked();
+}
+
+function setExamDate() {
+    const input = document.getElementById('examDate');
+    examDate = input.value;
+    localStorage.setItem('examDate', examDate);
+    updateDaysLeft();
+    renderFreePlan();
+    renderPremiumIfUnlocked();
+}
+
+function updateDaysLeft() {
+    const span = document.getElementById('daysLeft');
+    if (examDate) {
+        const days = Math.ceil((new Date(examDate) - Date.now()) / (86400000));
+        span.textContent = `${days} روز تا کنکور`;
+    } else {
+        span.textContent = '';
+    }
+}
+
+function saveData() {
+    localStorage.setItem('topics', JSON.stringify(topics));
+}
+
+// --------------------- بخش پریمیوم ---------------------
+function renderPremiumIfUnlocked() {
+    if (!premiumUnlocked) return;
+    document.getElementById('premiumLock').style.display = 'none';
+    document.getElementById('premiumContent').classList.remove('premium-locked');
+    
+    const now = Date.now();
+    // نمودار تسلط
+    const ctx = document.getElementById('masteryChart').getContext('2d');
+    // تخریب نمودار قبلی اگر وجود داشت
+    if (window.myChart) window.myChart.destroy();
+    
+    // برای سادگی، یک روز در میان تا کنکور شبیه‌سازی می‌کنیم
+    const daysToExam = examDate ? Math.ceil((new Date(examDate) - now)/86400000) : 30;
+    const labels = [];
+    const datasets = [];
+    for (let t of topics) {
+        const data = [];
+        let currentP = t.mastery;
+        let lastReview = t.lastStudy;
+        for (let d = 0; d <= daysToExam; d++) {
+            const simDate = now + d*86400000;
+            // اگر امروز برنامه‌ریزی شده که مطالعه کند (ساده‌سازی: روزهای زوج)
+            if (d % 2 === 0 && d > 0) {
+                // شبیه‌سازی یک مرور موفق
+                currentP = bayesianUpdate(currentP, true, 2);
+                lastReview = simDate;
+            }
+            // اعمال فراموشی
+            if (lastReview) {
+                const dt = (simDate - lastReview)/86400000;
+                currentP = t.mastery / Math.pow(1 + (t.gamma||BASE_GAMMA)*dt, (t.alpha||BASE_ALPHA));
+            }
+            data.push(currentP * 100);
+        }
+        datasets.push({
+            label: t.name,
+            data: data,
+            borderColor: `hsl(${Math.random()*360}, 70%, 50%)`,
+            fill: false
+        });
+        if (d === 0) labels.push('امروز');
+        else labels.push(`روز ${d}`);
+    }
+    window.myChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: { scales: { y: { max: 100, min: 0 } } }
+    });
+    
+    // برآورد نمره
+    const finalMasteries = datasets.map(ds => ds.data[ds.data.length-1]/100);
+    const avgMastery = finalMasteries.reduce((a,b)=>a+b,0) / finalMasteries.length;
+    document.getElementById('scoreEstimate').textContent = `${(avgMastery*100).toFixed(1)}%`;
+    
+    // پارامترهای فراموشی
+    const alphas = topics.map(t=>t.alpha||BASE_ALPHA);
+    const gammas = topics.map(t=>t.gamma||BASE_GAMMA);
+    document.getElementById('avgAlpha').textContent = (alphas.reduce((a,b)=>a+b,0)/alphas.length).toFixed(3);
+    document.getElementById('avgGamma').textContent = (gammas.reduce((a,b)=>a+b,0)/gammas.length).toFixed(3);
+}
+
+function unlockPremium() {
+    const code = document.getElementById('premiumCode').value.trim();
+    if (code === 'KONKOOR1404') {
+        premiumUnlocked = true;
+        localStorage.setItem('premiumUnlocked', 'true');
+        document.getElementById('premiumLock').style.display = 'none';
+        document.getElementById('premiumContent').classList.remove('premium-locked');
+        renderPremiumIfUnlocked();
+    } else {
+        alert('کد نامعتبر است. لطفاً کد صحیح را وارد کنید.');
+    }
+}
+
+// --------------------- راه‌اندازی اولیه ---------------------
+function init() {
+    if (examDate) {
+        document.getElementById('examDate').value = examDate;
+        updateDaysLeft();
+    }
+    if (premiumUnlocked) {
+        document.getElementById('premiumLock').style.display = 'none';
+        document.getElementById('premiumContent').classList.remove('premium-locked');
+    }
+    renderTopics();
+    renderFreePlan();
+    renderPremiumIfUnlocked();
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
