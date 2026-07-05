@@ -1,469 +1,479 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>راهبردساز کنکور | مدل ریاضی یادگیری</title>
-  <!-- Tailwind + Chart.js از CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    body { font-family: 'Vazirmatn', Tahoma, sans-serif; }
-    .tab-btn.active { background: #4f46e5; color: white; }
-    .premium-blur { filter: blur(6px); pointer-events: none; user-select: none; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>راهبردساز هوشمند مطالعهٔ کنکور</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body { font-family: 'Vazirmatn', Tahoma, sans-serif; }
+        .tab-btn.active { background: #1e3a5f; color: white; }
+        .premium-blur { filter: blur(6px); pointer-events: none; user-select: none; }
+        table { border-collapse: collapse; }
+        th, td { padding: 8px 12px; border: 1px solid #cbd5e1; text-align: center; }
+        th { background: #f1f5f9; font-weight: bold; }
+        .slider { width: 100%; }
+        .likert { display: flex; justify-content: space-between; }
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
 
 <div class="max-w-6xl mx-auto p-4">
-  <h1 class="text-3xl font-bold text-center text-indigo-700 mb-2">🎯 راهبردساز مطالعهٔ کنکور</h1>
-  <p class="text-center text-gray-500 text-sm mb-6">مبتنی بر مدل ریاضی ACT‑R، یادگیری بیزی، RL و فشرده‌سازی (MDL)</p>
+    <h1 class="text-3xl font-bold text-center text-indigo-800 mb-2">🎯 راهبردساز هوشمند مطالعهٔ کنکور</h1>
+    <p class="text-center text-gray-500 text-sm mb-6">مدل‌های ACT‑R، بیز، RL و MDL + شخصی‌سازی کامل</p>
 
-  <!-- تب‌ها -->
-  <div class="flex justify-center gap-2 mb-6">
-    <button id="tabInput" class="tab-btn active px-5 py-2 rounded-full bg-indigo-100 text-indigo-800 font-medium" onclick="switchTab('input')">📥 ورود اطلاعات</button>
-    <button id="tabToday" class="tab-btn px-5 py-2 rounded-full bg-indigo-100 text-indigo-800 font-medium" onclick="switchTab('today')">📅 برنامه امروز (رایگان)</button>
-    <button id="tabPremium" class="tab-btn px-5 py-2 rounded-full bg-yellow-100 text-yellow-800 font-medium" onclick="switchTab('premium')">⭐ نقشه راه پریمیوم</button>
-  </div>
+    <!-- تب‌ها -->
+    <div class="flex justify-center gap-2 mb-6 flex-wrap">
+        <button id="tabInput" class="tab-btn active px-5 py-2 rounded-full bg-indigo-100 text-indigo-800 font-medium" onclick="switchTab('input')">📥 ورود اطلاعات</button>
+        <button id="tabProfile" class="tab-btn px-5 py-2 rounded-full bg-purple-100 text-purple-800 font-medium" onclick="switchTab('profile')">🧠 پروفایل شخصیتی</button>
+        <button id="tabToday" class="tab-btn px-5 py-2 rounded-full bg-green-100 text-green-800 font-medium" onclick="switchTab('today')">📅 برنامه امروز</button>
+        <button id="tabPremium" class="tab-btn px-5 py-2 rounded-full bg-yellow-100 text-yellow-800 font-medium" onclick="switchTab('premium')">⭐ تحلیل پریمیوم</button>
+    </div>
 
-  <!-- محتوای تب‌ها -->
-  <div id="tabContent" class="bg-white rounded-2xl shadow p-6 min-h-[500px]">
-    <!-- محتوا با JavaScript پر می‌شود -->
-  </div>
+    <div id="tabContent" class="bg-white rounded-2xl shadow p-6 min-h-[600px]"></div>
 </div>
 
 <script>
-// ======================== پایگاه داده و پارامترها ========================
-const STORAGE_KEY = 'konkoor_topics_v2';
+// ======================== پایگاه داده و پیکربندی ========================
+const STORAGE_KEY = 'konkoor_full_v3';
 const PREMIUM_KEY = 'premium_unlocked';
-let topics = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-let examDate = localStorage.getItem('examDate') || '';
-let premium = localStorage.getItem(PREMIUM_KEY) === 'true';
+let studentData = JSON.parse(localStorage.getItem(STORAGE_KEY));
+if (!studentData || !studentData.profile) {
+    studentData = {
+        topics: [],
+        examDate: '',
+        profile: {
+            Sty: { exe: 0.4, leg: 0.2, jud: 0.1, hie: 0.2, mon: 0.05, anr: 0.05 },
+            tau: 0.5,
+            budget: { SQ: 0.2, Me: 0.5, UW: 0.2, SW: 0.1 },
+            lambda_align: 0.7,
+            A_plus: { l: 0.8, s: 0.3, c: 0.9 },
+            A_minus: { l: 0.6, s: 0.2, c: 0.8 },
+            E: 0.7,
+            Effort: 0.75
+        }
+    };
+    saveData();
+}
+let premiumUnlocked = localStorage.getItem(PREMIUM_KEY) === 'true';
 
-// پارامترهای مدل شناختی
-const ALPHA_DEFAULT = 0.25;   // شیب فراموشی
-const GAMMA_DEFAULT = 0.5;    // مقیاس
-const SLIP = 0.1;            // احتمال لغزش
-const GUESS = 0.25;          // حدس (چهار گزینه‌ای)
-const REWARD_ZONE = [0.60, 0.85]; // منطقه طلایی RL
+const GUESS = 0.25, SLIP = 0.1;
+const ALPHA_DEFAULT = 0.25, GAMMA_DEFAULT = 0.5;
 
-// ======================== مباحث پیش‌فرض کنکور ========================
-const DEFAULT_TOPICS = [
-  // ریاضی
-  {name:"مجموعه و الگوها", cat:"ریاضی"},
-  {name:"مثلثات", cat:"ریاضی"},
-  {name:"حد و پیوستگی", cat:"ریاضی"},
-  {name:"مشتق و کاربرد", cat:"ریاضی"},
-  {name:"انتگرال", cat:"ریاضی"},
-  {name:"احتمال", cat:"ریاضی"},
-  {name:"آمار", cat:"ریاضی"},
-  {name:"هندسه", cat:"ریاضی"},
-  // فیزیک
-  {name:"حرکت شناسی", cat:"فیزیک"},
-  {name:"دینامیک", cat:"فیزیک"},
-  {name:"نوسان و موج", cat:"فیزیک"},
-  {name:"الکتریسیته", cat:"فیزیک"},
-  {name:"مغناطیس", cat:"فیزیک"},
-  {name:"فیزیک اتمی", cat:"فیزیک"},
-  // شیمی
-  {name:"استوکیومتری", cat:"شیمی"},
-  {name:"ترموشیمی", cat:"شیمی"},
-  {name:"سینتیک", cat:"شیمی"},
-  {name:"تعادل", cat:"شیمی"},
-  {name:"اسید و باز", cat:"شیمی"},
-  {name:"آلی", cat:"شیمی"},
-  // زیست
-  {name:"زیست سلولی", cat:"زیست"},
-  {name:"ژنتیک", cat:"زیست"},
-  {name:"گیاهی", cat:"زیست"},
-  {name:"جانوری", cat:"زیست"},
-  {name:"بدن انسان", cat:"زیست"},
-  // عمومی
-  {name:"آرایه ادبی", cat:"عمومی"},
-  {name:"قرابت معنایی", cat:"عمومی"},
-  {name:"لغت و املا", cat:"عمومی"},
-  {name:"دین و زندگی", cat:"عمومی"},
-  {name:"زبان انگلیسی", cat:"عمومی"},
-];
+function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(studentData)); }
 
-// ======================== توابع مدل ریاضی ========================
+// ======================== مدل‌های ریاضی ========================
 function decayedMastery(topic, now = Date.now()) {
-  if (!topic.lastStudy) return topic.mastery;
-  const dt = (now - topic.lastStudy) / (1000 * 60 * 60 * 24); // روز
-  if (dt <= 0) return topic.mastery;
-  const a = topic.alpha || ALPHA_DEFAULT;
-  const g = topic.gamma || GAMMA_DEFAULT;
-  return topic.mastery / Math.pow(1 + g * dt, a);
+    if (!topic.lastStudy) return topic.mastery;
+    const dt = (now - topic.lastStudy) / 86400000;
+    if (dt <= 0) return topic.mastery;
+    const a = topic.alpha || ALPHA_DEFAULT;
+    const g = topic.gamma || GAMMA_DEFAULT;
+    return topic.mastery / Math.pow(1 + g * dt, a);
 }
 
 function bayesUpdate(prior, correct, rtSec = 3) {
-  const pCorrGivenMastered = 1 - SLIP;
-  const pCorrGivenNotMastered = GUESS;
-  let likelihood;
-  if (correct) {
-    likelihood = pCorrGivenMastered / pCorrGivenNotMastered;
-  } else {
-    likelihood = (1 - pCorrGivenMastered) / (1 - pCorrGivenNotMastered);
-  }
-  // وزن سرعت پاسخ
-  const speed = Math.min(1.5, Math.max(0.5, 2 / rtSec));
-  const adjLikelihood = Math.pow(likelihood, speed);
-  const odds = prior / (1 - prior) * adjLikelihood;
-  return odds / (1 + odds);
+    const pCorrMastered = 1 - SLIP, pCorrNotMastered = GUESS;
+    let lr = correct ? pCorrMastered / pCorrNotMastered : (1 - pCorrMastered) / (1 - pCorrNotMastered);
+    const speed = Math.min(1.5, Math.max(0.5, 2 / rtSec));
+    const adjLR = Math.pow(lr, speed);
+    const odds = prior / (1 - prior) * adjLR;
+    return odds / (1 + odds);
 }
 
-function study(topic, correct, rtSec = 2) {
-  const now = Date.now();
-  const current = decayedMastery(topic, now);
-  topic.mastery = Math.min(0.99, Math.max(0.01, bayesUpdate(current, correct, rtSec)));
-  topic.lastStudy = now;
-  if (!topic.history) topic.history = [];
-  topic.history.push({date: now, correct, rt: rtSec});
-  // به‌روزرسانی پارامتر فراموشی (ساده‌شده)
-  if (topic.history.length >= 5) {
-    const lastTwo = topic.history.slice(-2);
-    const dt = (lastTwo[1].date - lastTwo[0].date) / 86400000;
-    if (dt > 0.1) {
-      const retention = topic.mastery; // بعد از مرور
-      topic.alpha = Math.max(0.1, Math.min(0.8, -Math.log(retention)/Math.log(1+GAMMA_DEFAULT*dt)));
-    }
-  }
-  saveData();
+function computeRLReward(p) { return 1 - 4 * Math.pow(p - 0.725, 2); }
+
+function computePriority(topic, now = Date.now()) {
+    const p = decayedMastery(topic, now);
+    const daysSince = topic.lastStudy ? (now - topic.lastStudy) / 86400000 : 999;
+    const toExam = studentData.examDate ? Math.max(1, (new Date(studentData.examDate) - now) / 86400000) : 100;
+    const urgency = (1 - p) * (1 / Math.log(toExam + 2));
+    let rl = (p >= 0.6 && p <= 0.85) ? computeRLReward(p) : 0;
+    const reviewNeed = Math.min(1, daysSince / (2 + (topic.alpha || ALPHA_DEFAULT) * 3));
+    return 0.5 * urgency + 0.35 * rl + 0.15 * reviewNeed;
 }
 
-// اولویت یک مبحث برای مطالعه (امتیاز)
-function priority(topic, now = Date.now()) {
-  const p = decayedMastery(topic, now);
-  const daysSince = topic.lastStudy ? (now - topic.lastStudy)/86400000 : 999;
-  const toExam = examDate ? Math.max(1, (new Date(examDate) - now)/86400000) : 100;
-  // فوریت (تسلط پایین)
-  const urgency = (1 - p) * (1 / Math.log(toExam + 2));
-  // پاداش RL (حداکثر در ناحیه طلایی)
-  let rl = 0;
-  if (p >= REWARD_ZONE[0] && p <= REWARD_ZONE[1]) {
-    rl = 1 - 4 * Math.pow(p - 0.725, 2); // حداکثر در 0.725
-  }
-  // ضرورت مرور (فراموشی)
-  const reviewNeed = Math.min(1, daysSince / (2 + (topic.alpha || ALPHA_DEFAULT)*3));
-  return 0.5 * urgency + 0.35 * rl + 0.15 * reviewNeed;
+// ======================== خزانه کامل راهبردها (بیش از ۶۰ تکنیک) ========================
+const STRATEGIES = [
+    // 1. سبک‌های مطالعه (10)
+    {id:'S01',cat:'مطالعه',name:'مطالعه توزیعی',desc:'جلسات کوتاه متعدد',W:[0.4,0,1.0,0,0,0.6,0,0,0,0.8,0,0]},
+    {id:'S02',cat:'مطالعه',name:'مطالعه فشرده',desc:'یک جلسه طولانی',W:[0.7,0,0,0,0.5,0,0,0,0,0,0,0]},
+    {id:'S03',cat:'مطالعه',name:'روش SQ3R',desc:'پیش‌خوانی،سوال،مطالعه،بازگویی،مرور',W:[0.9,0.7,0.8,0,0,0,0,0.8,0.6,0.9,0,0]},
+    {id:'S04',cat:'مطالعه',name:'روش فاینمن',desc:'توضیح به کودک',W:[0,1.0,0,0,0,0,0,0,1.0,0,0.9,0]},
+    {id:'S05',cat:'مطالعه',name:'نقشه ذهنی',desc:'نمودار درختی',W:[0,0.7,0,0,0,0,0,0,1.0,0,0.8,0]},
+    {id:'S06',cat:'مطالعه',name:'مطالعه ترکیبی',desc:'Interleaving',W:[0,0.8,0,0.9,0,0,0,0,1.0,0,0.7,0]},
+    {id:'S07',cat:'مطالعه',name:'خلاصه محدود',desc:'نیم‌صفحه',W:[0.6,0,0,0,0,0,0,0,1.0,0.8,0,0]},
+    {id:'S08',cat:'مطالعه',name:'کدگذاری رنگی',desc:'چهار رنگ',W:[0,0,0,0,0,0.8,0,0,0,0.9,0,0]},
+    {id:'S09',cat:'مطالعه',name:'صدای بلند',desc:'خواندن با صدای خود',W:[0.6,0,0,0,0,0.7,0,0,0,0,0,0]},
+    {id:'S10',cat:'مطالعه',name:'تبدیل به جدول',desc:'متن به نمودار',W:[0,0.6,0,0,0,0,0,0,0.9,0,0,0]},
+    // 2. آزمون دادن (7)
+    {id:'T01',cat:'آزمون',name:'تکنیک دو دور',desc:'دور اول سریع',W:[0,0,0,0.7,0.9,0,0.8,0,0,0,0,0]},
+    {id:'T02',cat:'آزمون',name:'اولویت آسان‌ها',desc:'سوالات آسان اول',W:[0,0,0,0,0.8,0,0.9,0,0,0,0,0]},
+    {id:'T03',cat:'آزمون',name:'به ترتیب دفترچه',desc:'ترتیب عادی',W:[0,0,0,0,0.6,0,0,0,0,0.9,0,0]},
+    {id:'T04',cat:'آزمون',name:'علامت‌گذاری',desc:'+ و -',W:[0,0,0,0,0.8,0,0,0.7,0,0,0,0]},
+    {id:'T05',cat:'آزمون',name:'حذف گزینه و حدس',desc:'حدس آگاهانه',W:[0,0,0,0.5,0.7,0,0,0,0,0,0,0]},
+    {id:'T06',cat:'آزمون',name:'شبیه‌سازی کامل',desc:'شرایط واقعی',W:[0,0,0,0.8,0.9,0,0.9,0,0,0.7,0,0]},
+    {id:'T07',cat:'آزمون',name:'Brain Dump',desc:'نوشتن فرمول‌ها',W:[0,0,0.8,0,0,0,0.7,0,0,0,0,0]},
+    // 3. تحلیل آزمون (5)
+    {id:'A01',cat:'تحلیل',name:'دفتر اشتباهات',desc:'ثبت علت',W:[0,0,0.8,0,0,0,0,1.0,0,0,0,0.9]},
+    {id:'A02',cat:'تحلیل',name:'دسته‌بندی اشتباهات',desc:'دانشی،دقتی،زمانی',W:[0,0,0,0,0,0,0,1.0,0,0,0,0.8]},
+    {id:'A03',cat:'تحلیل',name:'نمودار روند',desc:'درصد هفتگی',W:[0,0,0,0,0,0,0.6,0.7,0,0,0,0.9]},
+    {id:'A04',cat:'تحلیل',name:'تحلیل استراتژی',desc:'ترتیب پاسخ‌دهی',W:[0,0,0,0,0.9,0,0,0.9,0,0,0,0.8]},
+    {id:'A05',cat:'تحلیل',name:'مقایسه با میانگین',desc:'تراز',W:[0,0,0,0,0,0,0.6,0,0,0,0,0.8]},
+    // 4. حل تمرین (5)
+    {id:'P01',cat:'تمرین',name:'بلافاصله و تأخیر',desc:'تست فوری و فردا',W:[0.8,0,0.9,0,0,0,0,0,0,0,0,0]},
+    {id:'P02',cat:'تمرین',name:'حل معکوس',desc:'دیدن پاسخ و بازسازی',W:[0,0.9,0,0.7,0,0,0,0,0.6,0,0,0]},
+    {id:'P03',cat:'تمرین',name:'ساندویچ',desc:'آسان-سخت-آسان',W:[0.6,0,0,0.8,0,0,0.9,0,0,0,0,0]},
+    {id:'P04',cat:'تمرین',name:'تست زمان‌دار',desc:'زمان کمتر',W:[0,0,0,0.8,1.0,0,0,0,0,0.9,0,0]},
+    {id:'P05',cat:'تمرین',name:'تکرار تا تسلط',desc:'اشتباهات قبلی',W:[0,0.7,0.9,0,0,0,0,0,0,0,0,0]},
+    // 5. حفظ کردن (5)
+    {id:'M01',cat:'حفظ',name:'قصر ذهنی',desc:'کاخ حافظه',W:[0.9,0,0.8,0,0,0,0,0,0,0,0.7,0]},
+    {id:'M02',cat:'حفظ',name:'داستان‌سازی',desc:'داستان طنز',W:[0.9,0,0,0,0,0,0,0,0.8,0,0.8,0]},
+    {id:'M03',cat:'حفظ',name:'مخفف‌سازی',desc:'Acronym',W:[0.8,0,0,0,0,0,0,0,0.7,0,0,0]},
+    {id:'M04',cat:'حفظ',name:'فلش‌کارت (انکی)',desc:'تکرار فاصله‌دار',W:[0.9,0,1.0,0,0,0,0,0,0,0.9,0,0]},
+    {id:'M05',cat:'حفظ',name:'بازیابی فعال',desc:'بستن کتاب',W:[0,0.8,0.9,0,0,0,0,0,0,0,0,0]},
+    // 6. مرور (5)
+    {id:'R01',cat:'مرور',name:'مرور فاصله‌دار',desc:'۱،۳،۷ روز',W:[0,0,1.0,0,0,0,0,0,0,0,0,0]},
+    {id:'R02',cat:'مرور',name:'مرور صبحگاهی',desc:'۵ دقیقه',W:[0,0,0.9,0,0,0.7,0,0,0,0,0,0]},
+    {id:'R03',cat:'مرور',name:'مرور نقشه ذهنی',desc:'نگاه به نقشه',W:[0,0,0.8,0,0,0,0,0,0.9,0,0,0]},
+    {id:'R04',cat:'مرور',name:'نصف حجم',desc:'خلاصه فشرده‌تر',W:[0,0,0.7,0,0,0,0,0,1.0,0,0,0]},
+    {id:'R05',cat:'مرور',name:'تدریس به دوست',desc:'توضیح برای دیگری',W:[0,0.9,0,0,0,0,0,0,0.8,0,0.8,0]},
+    // 7. خودپرسشگری (4)
+    {id:'SQ01',cat:'خودپرسشگری',name:'روش KWL',desc:'می‌دانم،می‌خواهم،یادگرفتم',W:[0.8,0,0,0,0,0,0,0.7,0,0,0,0]},
+    {id:'SQ02',cat:'خودپرسشگری',name:'طراحی سؤال',desc:'سوال ترکیبی',W:[0,1.0,0,0.9,0,0,0,0,0.8,0.2,0.9,0.5]},
+    {id:'SQ03',cat:'خودپرسشگری',name:'وکیل مدافع',desc:'بحث با خود',W:[0,0.9,0,0,0,0,0,0,0,0,0,0.9]},
+    {id:'SQ04',cat:'خودپرسشگری',name:'چه می‌شد اگر',desc:'What-if',W:[0,0.9,0,0,0,0,0,0,0,0,0.8,0]},
+    // 8. مدیریت تمرکز (5)
+    {id:'F01',cat:'تمرکز',name:'پومودورو',desc:'۲۵+۵',W:[0,0,0,0,0.8,0.9,0,0,0,0.9,0,0]},
+    {id:'F02',cat:'تمرکز',name:'حذف اعلان‌ها',desc:'حالت هواپیما',W:[0,0,0,0,0,1.0,0,0,0,0,0,0]},
+    {id:'F03',cat:'تمرکز',name:'محیط تک‌منظوره',desc:'فقط یک درس',W:[0,0,0,0,0,0.9,0,0,0,0.8,0,0]},
+    {id:'F04',cat:'تمرکز',name:'برگه حواس‌پرتی',desc:'یادداشت افکار',W:[0,0,0,0,0,0.8,0.7,0,0,0,0,0]},
+    {id:'F05',cat:'تمرکز',name:'مدیتیشن کوتاه',desc:'۲ دقیقه',W:[0,0,0,0,0,0.7,0.9,0,0,0,0,0]},
+    // 9. مدیریت زمان (5)
+    {id:'TM01',cat:'زمان',name:'ماتریس آیزنهاور',desc:'فوری/مهم',W:[0,0,0,0,0.9,0,0,0,0,0,0,0.9]},
+    {id:'TM02',cat:'زمان',name:'بلوک‌بندی روزانه',desc:'برنامه ساعتی',W:[0,0,0,0,0.9,0,0,0,0,1.0,0,0]},
+    {id:'TM03',cat:'زمان',name:'قانون ۲دقیقه',desc:'کار فوری',W:[0,0,0,0,0.8,0,0,0,0,0,0,0]},
+    {id:'TM04',cat:'زمان',name:'برنامه شب قبل',desc:'نوشتن برنامه',W:[0,0,0,0,0.7,0,0,0,0,0.9,0,0]},
+    {id:'TM05',cat:'زمان',name:'پارکینسون',desc:'ضرب‌الاجل سخت',W:[0,0,0,0,0.9,0,0,0,0,0.6,0,0]},
+    // 10. مدیریت هیجان (5)
+    {id:'E01',cat:'هیجان',name:'تنفس جعبه‌ای',desc:'۴-۴-۴-۴',W:[0,0,0,0,0,0,1.0,0,0,0,0,0]},
+    {id:'E02',cat:'هیجان',name:'تخلیه نگرانی‌ها',desc:'نوشتن و پاره کردن',W:[0,0,0,0,0,0,0.9,0,0,0,0,0]},
+    {id:'E03',cat:'هیجان',name:'گفتگوی مثبت',desc:'من تلاشم را کردم',W:[0,0,0,0,0,0,1.0,0,0,0,0,0]},
+    {id:'E04',cat:'هیجان',name:'ورزش کوتاه',desc:'طناب زدن',W:[0,0,0,0,0,0.6,0.8,0,0,0,0,0]},
+    {id:'E05',cat:'هیجان',name:'تجسم موفقیت',desc:'تصور نتیجه عالی',W:[0,0,0,0,0,0,0.9,0,0,0,0,0]},
+    // 11. بررسی تیپ سوالات (3)
+    {id:'QS01',cat:'بررسی سوال',name:'علامت‌گذاری E/M/H',desc:'اسکن سریع',W:[0,0,0,0,0.9,0,0,0,0,0,0,0.8]},
+    {id:'QS02',cat:'بررسی سوال',name:'شناسایی شکل‌دار',desc:'سوالات طولانی',W:[0,0,0,0,0.8,0,0,0,0,0,0,0]},
+    {id:'QS03',cat:'بررسی سوال',name:'ترتیب بر اساس تیپ',desc:'حفظی،مفهومی،محاسباتی',W:[0,0,0,0,0.9,0,0,0.7,0,0,0,0]},
+    // 12. اولویت‌بندی پاسخ (3)
+    {id:'PQ01',cat:'اولویت پاسخ',name:'اولویت آسان‌ها',desc:'سریع و آسان اول',W:[0,0,0,0,0.9,0,0.8,0,0,0,0,0]},
+    {id:'PQ02',cat:'اولویت پاسخ',name:'واگذاری سخت‌ها',desc:'رد شدن از سخت',W:[0,0,0,0.7,0.8,0,0,0,0,0,0,0]},
+    {id:'PQ03',cat:'اولویت پاسخ',name:'زمان مساوی هر درس',desc:'بودجه زمانی',W:[0,0,0,0,0.9,0,0,0,0,0.8,0,0]},
+    // 13. محاسبه سریع (3)
+    {id:'CF01',cat:'محاسبه سریع',name:'گرد کردن و جبران',desc:'تخمین و اصلاح',W:[0,0,0,0,1.0,0,0,0,0,0,0,0]},
+    {id:'CF02',cat:'محاسبه سریع',name:'جایگذاری گزینه',desc:'Back-solving',W:[0,0,0,0.7,1.0,0,0,0,0,0,0,0]},
+    {id:'CF03',cat:'محاسبه سریع',name:'تخمین حذفی',desc:'حذف با تخمین',W:[0,0,0,0.6,0.9,0,0,0,0,0,0,0]},
+    // 14. پاسخ تستی سریع (2)
+    {id:'QT01',cat:'پاسخ تستی',name:'حذف گزینه‌های مطلق',desc:'همیشه/هرگز',W:[0,0,0,0.5,0.9,0,0,0,0,0,0,0]},
+    {id:'QT02',cat:'پاسخ تستی',name:'اسکن گزینه‌ها',desc:'کلمات کلیدی',W:[0,0,0,0.5,0.9,0,0,0,0,0,0,0]},
+    // 15. پاسخ تشریحی (2)
+    {id:'CW01',cat:'پاسخ تشریحی',name:'گام‌به‌گام',desc:'برای نهایی',W:[0,0.9,0,0,0,0,0,0.8,0,0,0,0]},
+    {id:'CW02',cat:'پاسخ تشریحی',name:'رسم شکل',desc:'نمودار و نتیجه',W:[0,0.8,0,0,0,0,0,0,0.7,0,0,0]},
+    // 16. مرور سریع (3)
+    {id:'QR01',cat:'مرور سریع',name:'ورق‌زدن خلاصه‌ها',desc:'۱۰دقیقه قبل خواب',W:[0,0,0.9,0,0.7,0,0,0,0,0,0,0]},
+    {id:'QR02',cat:'مرور سریع',name:'هایلایت‌خوانی',desc:'فقط رنگی‌ها',W:[0,0,0.9,0,0,0,0,0,0,0,0,0]},
+    {id:'QR03',cat:'مرور سریع',name:'مرور ذهنی',desc:'تختخواب',W:[0,0,0.9,0,0,0,0.6,0,0,0,0,0]},
+    // 17. مرور جمع‌بندی (3)
+    {id:'SR01',cat:'جمع‌بندی',name:'نقشه ذهنی کل',desc:'همه فصل‌ها',W:[0,0,0.8,0,0,0,0,0,1.0,0,0,0]},
+    {id:'SR02',cat:'جمع‌بندی',name:'آزمون جامع',desc:'از همه مباحث',W:[0,0,0.9,0.7,0,0,0,0.8,0,0,0,0]},
+    {id:'SR03',cat:'جمع‌بندی',name:'خلاصه یک برگ A4',desc:'فشرده‌سازی نهایی',W:[0,0,0.8,0,0,0,0,0,1.0,0,0,0]},
+    // 18. مدیریت زیستی (4)
+    {id:'B01',cat:'زیستی',name:'چرخه خواب منظم',desc:'ساعت ثابت',W:[0,0,0,0,0,0.9,0.8,0,0,0,0,0]},
+    {id:'B02',cat:'زیستی',name:'چرت ۲۰دقیقه',desc:'Power nap',W:[0,0,0,0,0,0.8,0.7,0,0,0,0,0]},
+    {id:'B03',cat:'زیستی',name:'وعده‌های سبک',desc:'قند خون ثابت',W:[0,0,0,0,0,0.7,0.6,0,0,0,0,0]},
+    {id:'B04',cat:'زیستی',name:'آب منظم',desc:'بطری کنار دست',W:[0,0,0,0,0,0.8,0,0,0,0,0,0]},
+    // 19. مدیریت بحران (5)
+    {id:'CR01',cat:'بحران',name:'مدیریت افت تراز',desc:'تحلیل دقیق',W:[0,0,0,0,0,0,0.8,1.0,0,0,0,0.9]},
+    {id:'CR02',cat:'بحران',name:'تغییر روش',desc:'بیانگیزگی',W:[0,0,0,0,0,0,0.9,0,0,0,0.8,0]},
+    {id:'CR03',cat:'بحران',name:'مرور سریع بحران',desc:'احساس فراموشی',W:[0,0,0.9,0,0,0,0.9,0,0,0,0,0]},
+    {id:'CR04',cat:'بحران',name:'اولویت‌بندی و حذف',desc:'انباشتگی',W:[0,0,0,0,0.9,0,0,0.8,0,0,0,0.9]},
+    {id:'CR05',cat:'بحران',name:'پروتکل شب امتحان',desc:'خواب و تنفس',W:[0,0,0,0,0,0,1.0,0,0,0,0,0]},
+];
+
+// ======================== موتور تطبیق (Matcher) ========================
+function computeDemandVector(topic, now = Date.now()) {
+    const profile = studentData.profile;
+    const p = decayedMastery(topic, now);
+    const R = Math.min(1, p * 1.2);
+    const M = Math.max(0, p * 0.8 - 0.1);
+    const alpha = topic.alpha || ALPHA_DEFAULT;
+    const p0 = topic.mastery;
+    const dtStar = p0 > 0.7 ? ((Math.pow(p0/0.7, 1/alpha) - 1) / GAMMA_DEFAULT) : 1;
+    const D3 = Math.min(1, 1 / (dtStar + 1));
+    const D2 = (profile.Sty?.leg || 0.2) * (1 - M) * R;
+    return [
+        1 - R,                                     // D1
+        D2,                                        // D2
+        D3,                                        // D3
+        computeRLReward(p),                        // D4
+        0.5,                                       // D5 (می‌تواند از بازخورد آید)
+        1 - profile.Effort,                        // D6
+        1 - profile.E,                             // D7
+        0.5,                                       // D8
+        M > 0.8 ? 1 - M : 0.2,                     // D9
+        profile.Sty?.exe || 0.3,                   // D10
+        profile.Sty?.leg || 0.2,                   // D11
+        profile.Sty?.jud || 0.1                    // D12
+    ];
 }
 
-// پیشنهاد مطالعه ترکیبی (MDL)
-function mdlSuggestion(selected, all) {
-  const catMap = {};
-  selected.forEach(t => {
-    if (!catMap[t.cat]) catMap[t.cat] = [];
-    catMap[t.cat].push(t);
-  });
-  let sug = '';
-  for (let cat in catMap) {
-    if (catMap[cat].length >= 2) {
-      sug += `💡 مباحث ${catMap[cat][0].name} و ${catMap[cat][1].name} را پشت‌سرهم بخوان (فشرده‌سازی). `;
-    }
-  }
-  return sug;
-}
-
-// ======================== تولید برنامه امروز (رایگان) ========================
-function generateTodayPlan(totalMin = 180) {
-  if (topics.length === 0 || !examDate) return null;
-  const now = Date.now();
-  const items = topics.map(t => ({topic: t, pri: priority(t, now)}));
-  items.sort((a,b) => b.pri - a.pri);
-  // حذف مباحث با تسلط بالای ۰٫۹۵ و مرور نشده در ۳۰ روز اخیر
-  const filtered = items.filter(x => {
-    const p = decayedMastery(x.topic, now);
-    return p < 0.95 || (x.topic.lastStudy && (now - x.topic.lastStudy)/86400000 > 30);
-  });
-  if (filtered.length === 0) return {plan:[], msg:'همه مباحث عالی هستند. فقط مرور سریع.'};
-  const top = filtered.slice(0, 8);
-  const sumPri = top.reduce((s,x) => s + x.pri, 0);
-  const plan = top.map(x => ({
-    topic: x.topic,
-    min: Math.max(15, Math.round((x.pri/sumPri) * totalMin))
-  }));
-  const selTopics = plan.map(p => p.topic);
-  const mdl = mdlSuggestion(selTopics, topics);
-  return {plan, mdl};
-}
-
-// ======================== تولید نقشه راه تا کنکور (پریمیوم) ========================
-function generateRoadmap() {
-  if (!examDate || topics.length === 0) return [];
-  const now = Date.now();
-  const end = new Date(examDate).getTime();
-  const days = Math.ceil((end - now) / 86400000);
-  if (days <= 0) return [];
-  // کپی عمیق از topics برای شبیه‌سازی
-  const sim = topics.map(t => ({...t, mastery: t.mastery, lastStudy: t.lastStudy, alpha: t.alpha, gamma: t.gamma}));
-  const schedule = [];
-  for (let d = 0; d < days; d++) {
-    const currentTime = now + d * 86400000;
-    // اولویت‌بندی
-    const ranked = sim.map(t => ({topic: t, pri: priority(t, currentTime)}));
-    ranked.sort((a,b) => b.pri - a.pri);
-    // انتخاب ۵ مبحث برتر
-    const selected = ranked.slice(0, 5).filter(x => {
-      const p = decayedMastery(x.topic, currentTime);
-      return p < 0.95; // از قبل مسلط را نخوان
+function matchStrategies(topic) {
+    const D = computeDemandVector(topic);
+    const scored = STRATEGIES.map(s => {
+        let score = 0;
+        for (let i = 0; i < 12; i++) score += D[i] * (s.W[i] || 0);
+        return { ...s, score };
     });
-    if (selected.length === 0) continue;
-    // شبیه‌سازی مطالعه: فرض می‌کنیم همه را درست جواب دهد (خوش‌بینانه)
-    selected.forEach(s => {
-      const t = s.topic;
-      // مطالعه: یک مرور موفق با rt=2
-      const cur = decayedMastery(t, currentTime);
-      t.mastery = Math.min(0.99, bayesUpdate(cur, true, 2));
-      t.lastStudy = currentTime;
+    scored.sort((a,b) => b.score - a.score);
+    const bestPerCat = {};
+    scored.forEach(s => {
+        if (!bestPerCat[s.cat] || s.score > bestPerCat[s.cat].score) bestPerCat[s.cat] = s;
     });
-    schedule.push({
-      day: d+1,
-      date: new Date(currentTime).toLocaleDateString('fa-IR'),
-      topics: selected.map(s => s.topic.name)
-    });
-  }
-  return schedule;
+    return Object.values(bestPerCat).sort((a,b) => b.score - a.score);
 }
 
-// ======================== ذخیره و بازیابی ========================
-function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(topics));
+// ======================== مدیریت داده ========================
+function addTopic(name, cat, masteryPercent = 50) {
+    if (studentData.topics.find(t => t.name === name)) return false;
+    studentData.topics.push({ name, cat, mastery: masteryPercent/100, lastStudy: null, alpha: ALPHA_DEFAULT, gamma: GAMMA_DEFAULT, history: [] });
+    saveData();
+    return true;
 }
-function exportData() {
-  const data = { topics, examDate, exportDate: new Date().toISOString() };
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'konkoor_backup.json';
-  a.click();
+
+function logPractice(topicName, correct, rtSec = 3) {
+    const topic = studentData.topics.find(t => t.name === topicName);
+    if (!topic) return;
+    const current = decayedMastery(topic);
+    topic.mastery = bayesUpdate(current, correct, rtSec);
+    topic.lastStudy = Date.now();
+    if (!topic.history) topic.history = [];
+    topic.history.push({ date: Date.now(), correct, rt: rtSec });
+    saveData();
 }
-function importData(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const data = JSON.parse(e.target.result);
-      if (data.topics) topics = data.topics;
-      if (data.examDate) { examDate = data.examDate; localStorage.setItem('examDate', examDate); }
-      saveData();
-      renderActiveTab();
-    } catch (err) { alert('فایل نامعتبر است.'); }
-  };
-  reader.readAsText(file);
+
+// ======================== پرسشنامه و محاسبه پروفایل ========================
+function calculateProfileFromQuestionnaire() {
+    // خواندن مقادیر از اسلایدرها (نمونه ساده، می‌توان گسترش داد)
+    const getVal = id => parseFloat(document.getElementById(id)?.value || 0.5);
+    const rawExe = getVal('q_exe');
+    const rawLeg = getVal('q_leg');
+    const rawJud = getVal('q_jud');
+    const rawHie = getVal('q_hie');
+    const rawMon = getVal('q_mon');
+    const rawAnr = getVal('q_anr');
+    const sum = rawExe+rawLeg+rawJud+rawHie+rawMon+rawAnr || 1;
+    const Sty = {
+        exe: rawExe/sum,
+        leg: rawLeg/sum,
+        jud: rawJud/sum,
+        hie: rawHie/sum,
+        mon: rawMon/sum,
+        anr: rawAnr/sum
+    };
+    const tau = 1 / (1 + Math.exp(-(0.5 + 1.5*Sty.exe + 1.0*Sty.mon - 0.5*Sty.anr)));
+    const budget = {
+        SQ: Math.round((0.2 + 0.1*Sty.hie)*10)/10,
+        Me: Math.round((0.5 - 0.1*Sty.anr)*10)/10,
+        UW: Math.round((0.2 + 0.1*Sty.jud)*10)/10,
+        SW: Math.round((0.1 - 0.05*Sty.mon)*10)/10
+    };
+    const sumB = budget.SQ+budget.Me+budget.UW+budget.SW;
+    budget.SQ = Math.round(budget.SQ/sumB*10)/10;
+    budget.Me = Math.round(budget.Me/sumB*10)/10;
+    budget.UW = Math.round(budget.UW/sumB*10)/10;
+    budget.SW = Math.round(1 - budget.SQ - budget.Me - budget.UW, 1);
+
+    const lambda_align = 1 / (1 + Math.exp(-(0.8*Sty.exe + 0.6*Sty.hie - 0.3*Sty.anr)));
+    // اسنادها (ساده‌شده)
+    const A_plus = { l: 0.8, s: 0.3, c: 0.9 };
+    const A_minus = { l: 0.6, s: 0.2, c: 0.8 };
+    studentData.profile = { Sty, tau, budget, lambda_align, A_plus, A_minus, E: 0.7, Effort: 0.75 };
+    saveData();
+    alert('✅ پروفایل شخصیتی با موفقیت به‌روزرسانی شد.');
+    switchTab('profile');
 }
 
 // ======================== رابط کاربری ========================
 function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('active');
-  renderActiveTab();
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1));
+    if (btn) btn.classList.add('active');
+    renderActiveTab();
 }
 
 function renderActiveTab() {
-  const content = document.getElementById('tabContent');
-  const active = document.querySelector('.tab-btn.active').id;
-  if (active === 'tabInput') renderInputTab(content);
-  else if (active === 'tabToday') renderTodayTab(content);
-  else if (active === 'tabPremium') renderPremiumTab(content);
+    const content = document.getElementById('tabContent');
+    const active = document.querySelector('.tab-btn.active')?.id;
+    if (active === 'tabInput') renderInputTab(content);
+    else if (active === 'tabProfile') renderProfileTab(content);
+    else if (active === 'tabToday') renderTodayTab(content);
+    else if (active === 'tabPremium') renderPremiumTab(content);
 }
 
-// تب ورود اطلاعات
 function renderInputTab(container) {
-  const daysLeft = examDate ? Math.ceil((new Date(examDate)-Date.now())/86400000) : '—';
-  container.innerHTML = `
-    <div class="grid md:grid-cols-2 gap-6">
-      <div>
-        <h2 class="text-xl font-bold mb-3">📚 مدیریت مباحث</h2>
-        <div class="flex gap-2 mb-3">
-          <input id="newName" placeholder="نام مبحث" class="border rounded px-3 py-2 flex-1">
-          <select id="newCat" class="border rounded px-3 py-2">
-            <option>ریاضی</option><option>فیزیک</option><option>شیمی</option><option>زیست</option><option>عمومی</option>
-          </select>
-          <input id="newMastery" type="number" min="0" max="100" value="50" class="border rounded px-2 py-2 w-20" placeholder="%">
-          <button onclick="addTopic()" class="bg-indigo-600 text-white px-4 py-2 rounded">➕</button>
-        </div>
-        <button onclick="loadDefaults()" class="bg-green-600 text-white px-4 py-2 rounded mb-3">📋 بارگذاری مباحث کنکور</button>
-        <div class="flex gap-2 text-sm">
-          <button onclick="exportData()" class="bg-gray-200 px-3 py-1 rounded">💾 خروجی JSON</button>
-          <label class="bg-gray-200 px-3 py-1 rounded cursor-pointer">📂 ورودی JSON<input type="file" accept=".json" onchange="importData(this.files[0])" hidden></label>
-        </div>
-        <div class="mt-4 max-h-96 overflow-y-auto border rounded p-2">
-          ${renderTopicsTable()}
-        </div>
-      </div>
-      <div>
-        <h2 class="text-xl font-bold mb-3">📅 تنظیمات</h2>
-        <label class="block mb-2">تاریخ کنکور:</label>
-        <input type="date" id="examInput" value="${examDate}" class="border rounded px-3 py-2 mb-2 w-full">
-        <button onclick="setExamDate()" class="bg-indigo-600 text-white px-4 py-2 rounded">ذخیره</button>
-        <p class="mt-2 text-gray-600">روزهای باقی‌مانده: <span class="font-bold">${daysLeft}</span></p>
-        <div class="mt-6 p-3 bg-yellow-50 rounded border border-yellow-200">
-          <p class="font-semibold text-yellow-800">⭐ وضعیت پریمیوم: ${premium ? 'فعال' : 'غیرفعال'}</p>
-          ${!premium ? '<input id="premCode" placeholder="کد پریمیوم" class="border rounded px-2 py-1 mt-2"><button onclick="activatePremium()" class="bg-yellow-500 text-white px-3 py-1 rounded mr-2">فعال‌سازی</button><p class="text-xs text-gray-500 mt-1">کد آزمایشی: KONKOOR1404</p>' : ''}
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function renderTopicsTable() {
-  if (topics.length === 0) return '<p class="text-gray-400">هنوز مبحثی اضافه نشده.</p>';
-  const now = Date.now();
-  return `<table class="w-full text-sm"><thead><tr class="bg-gray-100"><th>مبحث</th><th>دسته</th><th>تسلط</th><th>آخرین مرور</th><th>ثبت تمرین</th><th></th></tr></thead><tbody>
-    ${topics.map(t => {
-      const p = decayedMastery(t, now);
-      const last = t.lastStudy ? new Date(t.lastStudy).toLocaleDateString('fa-IR') : 'هیچوقت';
-      return `<tr>
-        <td>${t.name}</td><td>${t.cat}</td><td>${(p*100).toFixed(1)}%</td><td>${last}</td>
-        <td><button onclick="log('${t.name}',true)" class="bg-green-100 text-green-700 px-2 py-0.5 rounded">✓</button>
-        <button onclick="log('${t.name}',false)" class="bg-red-100 text-red-700 px-2 py-0.5 rounded">✗</button></td>
-        <td><button onclick="deleteTopic('${t.name}')" class="text-red-500">✕</button></td>
-      </tr>`;
-    }).join('')}
-  </tbody></table>`;
-}
-
-// تب برنامه امروز
-function renderTodayTab(container) {
-  if (!examDate || topics.length === 0) {
-    container.innerHTML = '<p class="text-gray-500">ابتدا تاریخ کنکور را تنظیم و حداقل یک مبحث اضافه کنید.</p>';
-    return;
-  }
-  const plan = generateTodayPlan();
-  if (!plan || plan.plan.length === 0) {
-    container.innerHTML = '<p class="text-green-600 font-semibold">آفرین! همه مباحث در وضعیت مطلوب هستند. امروز استراحت یا مرور سریع.</p>';
-    return;
-  }
-  container.innerHTML = `
-    <h2 class="text-2xl font-bold text-green-700 mb-4">📅 برنامه امروز شما</h2>
-    <ul class="space-y-3">
-      ${plan.plan.map(p => `<li class="flex justify-between border-b pb-1"><span class="font-medium">${p.topic.name} (${p.topic.cat})</span><span>${p.min} دقیقه</span></li>`).join('')}
-    </ul>
-    ${plan.mdl ? `<div class="mt-4 p-3 bg-blue-50 rounded text-blue-800">${plan.mdl}</div>` : ''}
-    <p class="text-xs text-gray-400 mt-4">بر اساس مدل ACT‑R، یادگیری تقویتی و اصل فشرده‌سازی.</p>
-  `;
-}
-
-// تب پریمیوم
-function renderPremiumTab(container) {
-  if (!premium) {
-    container.innerHTML = `<div class="text-center py-10">
-      <p class="text-xl text-gray-500">برای مشاهده تحلیل پیشرفته و نقشه راه، پریمیوم را فعال کنید.</p>
-      <input id="premCode2" placeholder="کد پریمیوم" class="border rounded px-3 py-2 mt-3">
-      <button onclick="activatePremium()" class="bg-yellow-500 text-white px-4 py-2 rounded">فعال‌سازی</button>
-      <p class="text-xs text-gray-400 mt-2">کد آزمایشی: KONKOOR1404</p>
-    </div>`;
-    return;
-  }
-  const roadmap = generateRoadmap();
-  const now = Date.now();
-  const daysLeft = examDate ? Math.ceil((new Date(examDate)-now)/86400000) : 0;
-  // نمودار تسلط پیش‌بینی
-  container.innerHTML = `
-    <h2 class="text-2xl font-bold text-yellow-700 mb-4">⭐ نقشهٔ راه کامل تا کنکور (پریمیوم)</h2>
-    <p class="mb-2 text-sm text-gray-600">تعداد روز تا کنکور: <span class="font-bold">${daysLeft}</span> | تعداد مباحث: ${topics.length}</p>
-    <div class="grid md:grid-cols-2 gap-4">
-      <div>
-        <canvas id="masteryChart" width="300" height="200"></canvas>
-      </div>
-      <div class="max-h-64 overflow-y-auto border rounded p-2 text-sm">
-        <h3 class="font-bold mb-2">برنامه روزهای آینده (۵ مبحث اول هر روز)</h3>
-        ${roadmap.slice(0, 10).map(d => `<p class="mb-1"><span class="font-semibold">روز ${d.day} (${d.date}):</span> ${d.topics.join('، ')}</p>`).join('')}
-        ${roadmap.length > 10 ? '<p class="text-gray-400">...</p>' : ''}
-      </div>
-    </div>
-    <div class="mt-4 text-xs text-gray-500">نمودار تسلط بر اساس شبیه‌سازی با فرض مطالعهٔ منظم و پاسخ صحیح.</div>
-  `;
-  // رسم نمودار
-  setTimeout(() => {
-    const ctx = document.getElementById('masteryChart')?.getContext('2d');
-    if (!ctx) return;
-    const daysToPlot = Math.min(daysLeft, 30);
-    const labels = [];
-    const datasets = [];
-    for (let t of topics) {
-      const data = [];
-      let p = t.mastery;
-      let last = t.lastStudy;
-      for (let d = 0; d <= daysToPlot; d++) {
-        const simDate = now + d*86400000;
-        // هر ۲ روز یک مرور موفق
-        if (d % 2 === 0 && d>0) {
-          p = bayesUpdate(p, true, 2);
-          last = simDate;
-        }
-        if (last) {
-          const dt = (simDate - last)/86400000;
-          p = p / Math.pow(1 + (t.gamma||GAMMA_DEFAULT)*dt, (t.alpha||ALPHA_DEFAULT));
-        }
-        data.push((p*100).toFixed(1));
-      }
-      datasets.push({
-        label: t.name,
-        data,
-        borderColor: `hsl(${Math.random()*360},70%,50%)`,
-        fill: false,
-        tension: 0.2
-      });
-      labels.push(d===0 ? 'امروز' : `روز ${d}`);
-    }
-    new Chart(ctx, {
-      type: 'line',
-      data: { labels, datasets },
-      options: { responsive: true, scales: { y: { min:0, max:100 } } }
+    const topics = studentData.topics;
+    const now = Date.now();
+    let rows = '';
+    topics.forEach(t => {
+        const p = decayedMastery(t, now);
+        const last = t.lastStudy ? new Date(t.lastStudy).toLocaleDateString('fa-IR') : '—';
+        rows += `<tr>
+            <td>${t.name}</td><td>${t.cat}</td><td>${(p*100).toFixed(1)}%</td><td>${last}</td>
+            <td><button onclick="logPractice('${t.name}',true);renderActiveTab();" class="bg-green-100 text-green-700 px-2 py-0.5 rounded">✓</button>
+            <button onclick="logPractice('${t.name}',false);renderActiveTab();" class="bg-red-100 text-red-700 px-2 py-0.5 rounded">✗</button></td>
+            <td><button onclick="deleteTopic('${t.name}')" class="text-red-500">✕</button></td>
+        </tr>`;
     });
-  }, 100);
+    container.innerHTML = `
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <h2 class="text-xl font-bold mb-3">📚 مدیریت مباحث</h2>
+                <div class="flex gap-2 mb-3">
+                    <input id="newName" placeholder="نام مبحث" class="border rounded px-3 py-2 flex-1">
+                    <select id="newCat" class="border rounded px-3 py-2"><option>ریاضی</option><option>فیزیک</option><option>شیمی</option><option>زیست</option><option>عمومی</option></select>
+                    <input id="newMastery" type="number" min="0" max="100" value="50" class="border rounded px-2 py-2 w-20">
+                    <button onclick="handleAddTopic()" class="bg-indigo-600 text-white px-4 py-2 rounded">➕</button>
+                </div>
+                <button onclick="loadDefaults()" class="bg-green-600 text-white px-4 py-2 rounded mb-3">📋 بارگذاری پیش‌فرض</button>
+                <div class="max-h-80 overflow-y-auto border rounded p-2 text-sm">
+                    <table class="w-full"><thead><tr class="bg-gray-100"><th>مبحث</th><th>دسته</th><th>تسلط</th><th>آخرین مرور</th><th>ثبت تمرین</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="6" class="text-gray-400">مبحثی اضافه نشده</td></tr>'}</tbody></table>
+                </div>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold mb-3">⚙️ تنظیمات</h2>
+                <label class="block mb-2">تاریخ کنکور:</label>
+                <input type="date" id="examDateInput" value="${studentData.examDate||''}" class="border rounded px-3 py-2 mb-2 w-full">
+                <button onclick="setExamDate()" class="bg-indigo-600 text-white px-4 py-2 rounded">ذخیره</button>
+                <p class="mt-2 text-gray-600">روزهای باقی‌مانده: <span class="font-bold">${studentData.examDate ? Math.ceil((new Date(studentData.examDate)-Date.now())/86400000) : '—'}</span></p>
+                <div class="mt-6 p-3 bg-yellow-50 rounded border">
+                    <p class="font-semibold text-yellow-800">⭐ پریمیوم: ${premiumUnlocked ? 'فعال' : 'غیرفعال'}</p>
+                    ${!premiumUnlocked ? '<input id="premCode" placeholder="کد پریمیوم" class="border rounded px-2 py-1 mt-2"><button onclick="activatePremium()" class="bg-yellow-500 text-white px-3 py-1 rounded mr-2">فعال‌سازی</button><p class="text-xs text-gray-500 mt-1">کد آزمایشی: KONKOOR1404</p>' : ''}
+                </div>
+            </div>
+        </div>`;
 }
 
-// عملیات رابط
-function addTopic() {
-  const name = document.getElementById('newName').value.trim();
-  const cat = document.getElementById('newCat').value;
-  const mast = parseInt(document.getElementById('newMastery').value) || 50;
-  if (!name) return alert('نام را وارد کنید.');
-  if (topics.find(t => t.name === name)) return alert('تکراری است.');
-  topics.push({ name, cat, mastery: mast/100, lastStudy: null, alpha: ALPHA_DEFAULT, gamma: GAMMA_DEFAULT, history: [] });
-  saveData();
-  renderActiveTab();
+function renderProfileTab(container) {
+    const p = studentData.profile;
+    container.innerHTML = `
+        <h2 class="text-2xl font-bold mb-4">🧠 پرسشنامه سبک‌های تفکر و شخصیت</h2>
+        <p class="text-gray-600 mb-4">لطفاً میزان موافقت خود را با هر جمله مشخص کنید (۱=کاملاً مخالف، ۵=کاملاً موافق):</p>
+        <div class="space-y-4">
+            <div><label class="font-medium">۱. دوست دارم کارها را طبق یک برنامهٔ دقیق و ساختاریافته انجام دهم. (اجرایی)</label>
+            <input type="range" min="1" max="5" value="${Math.round(p.Sty.exe*4)+1}" class="slider" id="q_exe"></div>
+            <div><label class="font-medium">۲. ترجیح می‌دهم خودم راه‌حل‌های جدید و خلاقانه پیدا کنم. (قانون‌گذاری)</label>
+            <input type="range" min="1" max="5" value="${Math.round(p.Sty.leg*4)+1}" class="slider" id="q_leg"></div>
+            <div><label class="font-medium">۳. همیشه عملکرد خود را تحلیل و نقد می‌کنم. (قضایی)</label>
+            <input type="range" min="1" max="5" value="${Math.round(p.Sty.jud*4)+1}" class="slider" id="q_jud"></div>
+            <div><label class="font-medium">۴. می‌توانم اولویت‌های مهم را از غیرمهم تشخیص دهم. (سلسله‌مراتبی)</label>
+            <input type="range" min="1" max="5" value="${Math.round(p.Sty.hie*4)+1}" class="slider" id="q_hie"></div>
+            <div><label class="font-medium">۵. معمولاً روی یک هدف متمرکز می‌مانم تا آن را تمام کنم. (تک‌قطبی)</label>
+            <input type="range" min="1" max="5" value="${Math.round(p.Sty.mon*4)+1}" class="slider" id="q_mon"></div>
+            <div><label class="font-medium">۶. به راحتی برنامه‌هایم را تغییر می‌دهم و از تنوع لذت می‌برم. (آنارشیک)</label>
+            <input type="range" min="1" max="5" value="${Math.round(p.Sty.anr*4)+1}" class="slider" id="q_anr"></div>
+        </div>
+        <button onclick="calculateProfileFromQuestionnaire()" class="mt-6 bg-purple-600 text-white px-6 py-2 rounded font-bold">💾 ذخیره پروفایل</button>
+        <div class="mt-4 p-3 bg-gray-50 rounded text-sm">
+            <p>مقادیر فعلی: اجرایی=${p.Sty.exe.toFixed(2)}، قانون‌گذاری=${p.Sty.leg.toFixed(2)}، قضایی=${p.Sty.jud.toFixed(2)}، سلسله‌مراتبی=${p.Sty.hie.toFixed(2)}، تک‌قطبی=${p.Sty.mon.toFixed(2)}، آنارشیک=${p.Sty.anr.toFixed(2)}</p>
+        </div>`;
 }
-function deleteTopic(name) {
-  topics = topics.filter(t => t.name !== name);
-  saveData();
-  renderActiveTab();
+
+function renderTodayTab(container) {
+    if (!studentData.examDate || studentData.topics.length === 0) {
+        container.innerHTML = '<p class="text-gray-500">ابتدا تاریخ کنکور و مباحث را تنظیم کنید.</p>'; return;
+    }
+    const now = Date.now();
+    const items = studentData.topics.map(t => ({ topic: t, pri: computePriority(t, now) }));
+    items.sort((a,b) => b.pri - a.pri);
+    const selected = items.filter(x => decayedMastery(x.topic, now) < 0.95).slice(0, 6);
+    if (selected.length === 0) {
+        container.innerHTML = '<p class="text-green-600 font-semibold">همه مباحث عالی هستند. امروز مرور سریع کافی است.</p>'; return;
+    }
+    let html = '<h2 class="text-2xl font-bold text-green-700 mb-4">📅 برنامه امروز</h2><ul class="space-y-3">';
+    selected.forEach(({topic}) => {
+        const strats = matchStrategies(topic).slice(0, 2);
+        html += `<li class="border-b pb-3"><span class="font-bold">${topic.name}</span> (${topic.cat}) - تسلط: ${(decayedMastery(topic,now)*100).toFixed(0)}%`;
+        if (strats.length > 0) {
+            html += '<ul class="text-sm text-indigo-700 mt-1 pr-4 list-disc">';
+            strats.forEach(s => html += `<li>${s.name}: ${s.desc}</li>`);
+            html += '</ul>';
+        }
+        html += '</li>';
+    });
+    html += '</ul>';
+    container.innerHTML = html;
 }
-function log(name, correct) {
-  const t = topics.find(t => t.name === name);
-  if (t) study(t, correct, correct ? 2 : 4);
-  renderActiveTab();
+
+function renderPremiumTab(container) {
+    if (!premiumUnlocked) {
+        container.innerHTML = `<div class="text-center py-10"><p class="text-xl text-gray-500">برای تحلیل پیشرفته، پریمیوم را فعال کنید.</p>
+        <input id="premCode2" placeholder="کد پریمیوم" class="border rounded px-3 py-2 mt-3">
+        <button onclick="activatePremium()" class="bg-yellow-500 text-white px-4 py-2 rounded">فعال‌سازی</button>
+        <p class="text-xs text-gray-400 mt-2">کد آزمایشی: KONKOOR1404</p></div>`; return;
+    }
+    const now = Date.now();
+    let rows = '';
+    studentData.topics.forEach(t => {
+        const D = computeDemandVector(t);
+        const best = matchStrategies(t)[0];
+        rows += `<tr><td>${t.name}</td><td>${(decayedMastery(t,now)*100).toFixed(0)}%</td><td>${D.slice(0,9).map(d=>d.toFixed(1)).join(',')}</td><td>${best?best.name:'—'}</td></tr>`;
+    });
+    container.innerHTML = `
+        <h2 class="text-2xl font-bold text-yellow-700 mb-4">⭐ تحلیل پریمیوم</h2>
+        <p class="text-sm text-gray-600 mb-2">بردار تقاضا (D1..D9) و بهترین استراتژی برای هر مبحث:</p>
+        <div class="overflow-x-auto"><table class="text-sm w-full"><thead><tr><th>مبحث</th><th>تسلط</th><th>بردار تقاضا</th><th>بهترین استراتژی</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
-function setExamDate() {
-  examDate = document.getElementById('examInput').value;
-  localStorage.setItem('examDate', examDate);
-  renderActiveTab();
+
+// توابع کمکی
+function handleAddTopic() {
+    const name = document.getElementById('newName').value.trim();
+    const cat = document.getElementById('newCat').value;
+    const mastery = parseInt(document.getElementById('newMastery').value) || 50;
+    if (!name) return alert('نام را وارد کنید.');
+    if (addTopic(name, cat, mastery)) renderActiveTab();
+    else alert('تکراری است.');
 }
+function deleteTopic(name) { studentData.topics = studentData.topics.filter(t => t.name !== name); saveData(); renderActiveTab(); }
+function setExamDate() { studentData.examDate = document.getElementById('examDateInput').value; saveData(); renderActiveTab(); }
 function activatePremium() {
-  const code = (document.getElementById('premCode')?.value || document.getElementById('premCode2')?.value || '').trim();
-  if (code === 'KONKOOR1404') {
-    premium = true;
-    localStorage.setItem(PREMIUM_KEY, 'true');
-    renderActiveTab();
-  } else alert('کد اشتباه است.');
+    const code = (document.getElementById('premCode')?.value || document.getElementById('premCode2')?.value || '').trim();
+    if (code === 'KONKOOR1404') { premiumUnlocked = true; localStorage.setItem(PREMIUM_KEY, 'true'); renderActiveTab(); }
+    else alert('کد نامعتبر.');
 }
 function loadDefaults() {
-  if (topics.length > 0 && !confirm('مباحث فعلی حذف شوند؟')) return;
-  topics = DEFAULT_TOPICS.map(t => ({
-    ...t,
-    mastery: 0.5,
-    lastStudy: null,
-    alpha: ALPHA_DEFAULT,
-    gamma: GAMMA_DEFAULT,
-    history: []
-  }));
-  saveData();
-  renderActiveTab();
+    studentData.topics = [
+        {name:"مثلثات",cat:"ریاضی",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"حد و پیوستگی",cat:"ریاضی",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"مشتق",cat:"ریاضی",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"حرکت شناسی",cat:"فیزیک",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"دینامیک",cat:"فیزیک",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"الکتریسیته",cat:"فیزیک",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"استوکیومتری",cat:"شیمی",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"ترموشیمی",cat:"شیمی",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"تعادل",cat:"شیمی",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"زیست سلولی",cat:"زیست",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"ژنتیک",cat:"زیست",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"گیاهی",cat:"زیست",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"آرایه ادبی",cat:"عمومی",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"قرابت معنایی",cat:"عمومی",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]},
+        {name:"زبان انگلیسی",cat:"عمومی",mastery:0.5,lastStudy:null,alpha:ALPHA_DEFAULT,gamma:GAMMA_DEFAULT,history:[]}
+    ];
+    saveData();
+    renderActiveTab();
 }
 
-// شروع
 window.onload = () => switchTab('input');
 </script>
 </body>
-    </html>
+</html>
